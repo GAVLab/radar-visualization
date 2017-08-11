@@ -3,7 +3,7 @@
     <node pkg="radar_visualization" type="radar_visualization.py" name="radar_visualization" output="screen" required="true">
 
         <param name="box_width" value="1.0"/>
-        <param name="camera_pitch_offset" value="0.0"/>
+        <param name="camera_pitch_offset" value="5.0"/>
         <param name="camera_yaw_offset" value="0.0"/>
         <param name="camera_height_offset" value="0.0"/>
         <param name="camera_depth_offset" value="0.0"/>
