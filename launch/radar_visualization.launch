@@ -1,0 +1,16 @@
+<launch>
+
+    <node pkg="radar_visualization" type="radar_visualization.py" name="radar_visualization" output="screen" required="true">
+
+        <param name="box_width" value="1.0"/>
+        <param name="camera_pitch_offset" value="0.0"/>
+        <param name="camera_yaw_offset" value="0.0"/>
+        <param name="camera_height_offset" value="0.0"/>
+        <param name="camera_depth_offset" value="0.0"/>
+        <param name="radar_topic" value="/delphi_node/radar_data" type="string"/>
+        <param name="image_topic" value="/axis_decompressed" type="string"/>
+        <param name="image_overlay_topic" value="/radar_overlay" type="string"/>
+        
+    </node>
+
+</launch>
