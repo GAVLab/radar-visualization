@@ -52,7 +52,7 @@ class RadarVizNode():
 
   def radarCallback(self,msg):
     for i in range(0,64):
-      if ( (msg.status[i]>0) and (msg.track_moving[i]) ):
+      if ( (msg.status[i]>0) ):#and (msg.track_moving[i]) ):
         self.range[i] = msg.range[i]
         self.angle[i] = msg.azimuth[i]*pi/180
       else:
@@ -141,8 +141,8 @@ class RadarVizNode():
     x_im = (x_[0]/x_[2]).astype(int)
     y_im = (x_[1]/x_[2]).astype(int)
 
-    if ( (x_im<0) or (x_im>self.imageWidth) or (y_im<0) or (y_im>self.imageHeight) ):
-      return (None,None)
+    # if ( (x_im<0) or (x_im>self.imageWidth) or (y_im<0) or (y_im>self.imageHeight) ):
+    #   return (None,None)
     
     return (x_im,y_im)
 
