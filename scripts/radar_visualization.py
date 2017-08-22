@@ -21,10 +21,11 @@ class RadarVizNode():
     self.bridge = CvBridge()
     
     self.boxWidth = rospy.get_param('~box_width',1.0)
-    camPitchDeg = rospy.get_param('~camera_pitch_offset',0.0)
-    camYawDeg = rospy.get_param('~camera_yaw_offset',0.0)
+    camPitchDeg = rospy.get_param('~camera_pitch_offset_deg',0.0)
+    camYawDeg = rospy.get_param('~camera_yaw_offset_deg',0.0)
     self.camHeight = rospy.get_param('~camera_height_offset',2.0)
-    self.camDepth = rospy.get_param('~camera_depth_offset',2.0)
+    self.camLongOffset = rospy.get_param('~camera_longitudinal_offset',2.0)
+    self.camLatOffset = rospy.get_param('~camera_lateral_offset',0.0)
     radarTopic = rospy.get_param('~radar_topic',"/delphi_node/radar_data")
     imageTopic = rospy.get_param('~image_topic',"/axis_decompressed")
     overlayTopic = rospy.get_param('~image_overlay_topic',"/radar_overlay")
@@ -122,7 +123,7 @@ class RadarVizNode():
 
   def getCameraProjection(self,r_sp_s):
 
-    r_cs_s = np.matrix( (self.camDepth,0.0,self.camHeight) ).T # rpv from camera to radar resolved in the sensor frame
+    r_cs_s = np.matrix( (self.camLongOffset,self.camLatOffset,self.camHeight) ).T # rpv from camera to radar resolved in the sensor frame
 
     Ccs = self.rotationMatrix(0.0,self.camPitch,self.camYaw) # rotation matrix from the camera frame to the sensor frame
     Csc = Ccs.T # rotation matrix from the sensor frame to the camera frame

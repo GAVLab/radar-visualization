@@ -1,0 +1,9 @@
+Radar is 20" from ground 
+Cab floor is 50 from ground 
+Camera is 48.5 from cab floor 
+Camera is pitched downward ~2.5 degrees
+Camera is 5.5 inches to right of center line
+Yawed a couple of degrees to the right 
+Depth is 67"
+
+Bucket is 1 foot diameter and 28" tall
