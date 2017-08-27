@@ -1,34 +1,25 @@
 <launch>
 
-<!-- <arg name="bagfile" default="/media/psf/Home/Google\ Drive/GAVLAB/data/trucks/8_9_17/grouping_mode_1_trucks_moving.bag"/> -->
+    <arg name="bagfile" default="/media/psf/Home/Google\ Drive/GAVLAB/data/trucks/8_9_17/grouping_mode_1_trucks_moving.bag"/>
 
-    <arg name="bagfile" default="/media/psf/Home/Google\ Drive/GAVLAB/data/trucks/8_15_17/bucket_radar_test.bag"/>
+    <!-- <arg name="bagfile" default="/media/psf/Home/Google\ Drive/GAVLAB/data/trucks/8_15_17/bucket_radar_test.bag"/> -->
 
     <!-- rosbag play -->
     <param name="use_sim_time" value="true"/>
-    <node name="rosbag" pkg="rosbag" type="play" args="-s 0 -l --clock -r 2.0 $(arg bagfile)" />
-
-    <!-- decompress -->
-    <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/axis/image_raw out:=/axis_decompressed" />
-
-    <!-- radar overlay -->
-    <node pkg="radar_visualization" type="radar_visualization.py" name="radar_visualization" output="screen" required="true">
-        <param name="box_width" value="0.3048"/>
-        
-        <param name="camera_pitch_offset_deg" value="-3.5"/>
-        <param name="camera_yaw_offset_deg" value="2.0"/>
-        
-        <param name="camera_height_offset" value="1.99"/>
-        <param name="camera_longitudinal_offset" value="1.70"/>
-        <param name="camera_lateral_offset" value="-0.14"/>
-
-        <param name="radar_topic" value="/delphi_node/radar_data" type="string"/>
-        <param name="image_topic" value="/axis_decompressed" type="string"/>
-        <param name="image_overlay_topic" value="/radar_overlay" type="string"/>
-        
+    <node name="rosbag" pkg="rosbag" type="play" args="-s 0 -l --clock -r 1.0 $(arg bagfile)" >
+        <remap from="/drtk/drtkOutput2" to="/drtk_node/drtkOutput"/>
     </node>
 
+    <!-- decompress image -->
+    <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/axis/image_raw out:=/axis_decompressed" />
+
+    <!-- range estimator -->
+    <include file="$(find cacc_range_estimation)/launch/cacc_range_estimation.launch"/>
+
+    <!-- radar overlay -->
+    <include file="$(find radar_visualization)/launch/radar_visualization.launch"/>
+
     <!-- image view -->
-    <node pkg="image_view" type="image_view" name="image_view" output="screen" required="true" args="image:=/radar_overlay"/>
+    <node pkg="image_view" type="image_view" name="image_view" output="screen" required="true" args="image:=/radar_visualization/image_overlay"/>
 
 </launch>

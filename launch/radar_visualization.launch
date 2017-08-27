@@ -1,16 +1,22 @@
 <launch>
 
-    <node pkg="radar_visualization" type="radar_visualization.py" name="radar_visualization" output="screen" required="true">
+  <!-- radar vizualization -->
+  <node pkg="radar_visualization" type="radar_visualization.py" name="radar_visualization" output="screen" required="true">
 
-        <param name="box_width" value="1.0"/>
-        <param name="camera_pitch_offset_deg" value="5.0"/>
-        <param name="camera_yaw_offset_deg" value="0.0"/>
-        <param name="camera_height_offset" value="0.0"/>
-        <param name="camera_depth_offset" value="0.0"/>
-        <param name="radar_topic" value="/delphi_node/radar_data" type="string"/>
-        <param name="image_topic" value="/axis_decompressed" type="string"/>
-        <param name="image_overlay_topic" value="/radar_overlay" type="string"/>
-        
-    </node>
+      <param name="box_width" value="1.0"/>
+      <param name="line_width" value="3"/>
+      <param name="show_range_estimate" value="true"/>
+      
+      <param name="camera_pitch_offset_deg" value="-4.5"/>
+      <param name="camera_yaw_offset_deg" value="2.0"/>
+      <param name="camera_height_offset" value="1.99"/>
+      <param name="camera_longitudinal_offset" value="1.70"/>
+      <param name="camera_lateral_offset" value="-0.14"/>
+
+      <param name="range_estimate_topic" value="/range_kf_node/rangeEstimationOutput" type="string"/>
+      <param name="radar_topic" value="/delphi_node/radar_data" type="string"/>
+      <param name="image_topic" value="/axis_decompressed" type="string"/>
+            
+  </node>
 
 </launch>
