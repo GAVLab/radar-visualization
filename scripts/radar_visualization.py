@@ -68,7 +68,7 @@ class RadarVizNode():
     for i in range(0,64):
       if ( (msg.status[i]>0) ):#and (msg.track_moving[i]) ):
         self.range[i] = msg.range[i]
-        self.angle[i] = msg.azimuth[i]*pi/180
+        self.angle[i] = msg.azimuth[i]*pi/180.
       else:
         self.range[i] = 0.0
 
@@ -90,8 +90,6 @@ class RadarVizNode():
     # --- Overlay estimator solution
     if self.estRange is not None:
       boxPoints = self.getBoxPoints(self.estRange,self.estAngle)
-      # boxPoints = self.getBoxPoints(5.0,0.0)
-      print boxPoints
       self.boxImageOverlay(boxPoints,(255,0,0),img)
 
     # --- Convert CV format into ROS format
