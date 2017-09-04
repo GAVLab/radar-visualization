@@ -53,8 +53,8 @@ class RadarVizNode():
     self.range = np.zeros( (64,1) ) # radar ranges
     self.angle = np.zeros( (64,1) ) # radar angles
 
-    self.estRange = None;
-    self.estAngle = None;
+    self.estRange = None
+    self.estAngle = None
 
     self.Mint = np.matrix((  (941.087953,0.000000,624.481729),
                              (0.000000,942.665887,382.681338),
@@ -65,8 +65,15 @@ class RadarVizNode():
     self.estAngle = msg.azimuth;
 
   def radarCallback(self,msg):
+
+    if type(msg.status) is str:
+      status = bytearray()
+      status.extend(msg.status)
+    else:
+      status = msg.status
+
     for i in range(0,64):
-      if ( (msg.status[i]>0) ):#and (msg.track_moving[i]) ):
+      if ( (status[i] is 3) ):#and (msg.track_moving[i]) ):
         self.range[i] = msg.range[i]
         self.angle[i] = msg.azimuth[i]*pi/180.
       else:
