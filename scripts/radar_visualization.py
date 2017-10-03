@@ -63,6 +63,7 @@ class RadarVizNode():
   def rangeCallback(self,msg):
     self.estRange = msg.range;
     self.estAngle = msg.azimuth;
+    self.measTrackId = msg.radarTrackId;
 
   def radarCallback(self,msg):
 
@@ -73,7 +74,7 @@ class RadarVizNode():
       status = msg.status
 
     for i in range(0,64):
-      if ( (status[i] is 3) ):#and (msg.track_moving[i]) ):
+      if ( (status[i] is 3) or (status[i] is 4) or (status[i] is 5) ):
         self.range[i] = msg.range[i]
         self.angle[i] = msg.azimuth[i]*pi/180.
       else:
