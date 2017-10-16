@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-from math import pi,cos,sin,atan2
+from math import pi,cos,sin,atan2,ceil
 
 class RadarVizNode():
   def __init__(self):
@@ -22,7 +22,7 @@ class RadarVizNode():
     
     # --- Vizualization parameters
     self.boxWidth = rospy.get_param('~box_width',1.0)
-    self.lineWidth = rospy.get_param('~line_width',1)
+    self.lineWidth = rospy.get_param('~line_width',5)
     self.showRangeEstimate = rospy.get_param('~show_range_estimate',True)
 
     # --- Extrinsic parameters
@@ -40,6 +40,7 @@ class RadarVizNode():
 
     # --- Topic names
     rangeTopic = rospy.get_param('~range_estimate_topic',"/range_kf_node/rangeEstimationOutput")
+    cutInTopic = rospy.get_param('~cut_in_state_topic',"/range_kf_node/cutInState")
     radarTopic = rospy.get_param('~radar_topic',"/delphi_node/radar_data")
     imageTopic = rospy.get_param('~image_topic',"/axis_decompressed")
     
@@ -51,6 +52,7 @@ class RadarVizNode():
     
     if self.showRangeEstimate:
       rospy.Subscriber(rangeTopic,RangeEstimationOutput,self.rangeCallback,queue_size=1)
+      rospy.Subscriber(cutInTopic,RangeEstimationOutput,self.cutInCallback,queue_size=1)
     
     # --- Class variables
     self.range = np.zeros( (64,1) ) # radar ranges
@@ -59,9 +61,16 @@ class RadarVizNode():
     self.estRange = None
     self.estAngle = None
 
+    self.cutInRange = None
+    self.cutInAngle = None
+
     self.Mint = np.matrix((  (941.087953,0.000000,624.481729),
                              (0.000000,942.665887,382.681338),
                              (0.000000,0.000000,1.000000)   ))
+
+  def cutInCallback(self,msg):
+    self.cutInRange = msg.range
+    self.cutInAngle = msg.azimuth
 
   def rangeCallback(self,msg):
     self.estRange = msg.range;
@@ -96,12 +105,20 @@ class RadarVizNode():
       if (self.range[i]>0):
         # Project range/angle to pixel location
         boxPoints = self.getBoxPoints(self.range[i],self.angle[i])
-        self.boxImageOverlay(boxPoints,(0,0,255),img)
+        lw = self.getScaledLineWidth(self.range[i])
+        self.boxImageOverlay(boxPoints,(0,0,255),img,lw)
     
     # --- Overlay estimator solution
     if self.estRange is not None:
       boxPoints = self.getBoxPoints(self.estRange,self.estAngle)
-      self.boxImageOverlay(boxPoints,(255,0,0),img)
+      lw = self.getScaledLineWidth(self.estRange)
+      self.boxImageOverlay(boxPoints,(255,0,0),img,lw)
+
+    # --- Overlay cutIn solution
+    if (self.estRange>0.0):
+      boxPoints = self.getBoxPoints(self.cutInRange,self.cutInAngle)
+      lw = self.getScaledLineWidth(self.cutInRange)
+      self.boxImageOverlay(boxPoints,(255,0,255),img,lw)
 
     # --- Convert CV format into ROS format
     img_out = img
@@ -112,14 +129,23 @@ class RadarVizNode():
 
     self.image_pub.publish(image_msg)
 
-  def boxImageOverlay(self,boxPoints,bgr,img):
+  def getScaledLineWidth(self,r):
+    maxLwRange = 100.0
+    if (r >= maxLwRange):
+      r = maxLwRange
+
+    lw = int( (1.0 - r/maxLwRange)*self.lineWidth ) + 1
+
+    return lw
+
+  def boxImageOverlay(self,boxPoints,bgr,img,lw):
     for pt1 in boxPoints.T:
         for pt2 in boxPoints.T:
             if pt1 is not pt2:
                 px1,py1 = self.getCameraProjection(pt1.T)
                 px2,py2 = self.getCameraProjection(pt2.T)
                 if ( (px1 is not None) and (px2 is not None) ):
-                    cv2.line(img,(px1,py1),(px2,py2),bgr,self.lineWidth)
+                    cv2.line(img,(px1,py1),(px2,py2),bgr,lw)
 
   def getBoxPoints(self,r,ang):
     r_sp_s = np.matrix( (r*cos(ang),r*sin(ang),0.0) ).T # rpv from radar ("sensor") to point resolved in the sensor frame
