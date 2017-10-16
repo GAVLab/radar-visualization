@@ -32,6 +32,9 @@ class RadarVizNode():
     self.camLongOffset = rospy.get_param('~camera_longitudinal_offset',2.0)
     self.camLatOffset = rospy.get_param('~camera_lateral_offset',0.0)
 
+    radarAngleOffsetDeg = rospy.get_param('/range_kf_node/radar_angle_offset_degrees',0.0)
+    self.radarAngleOffset = radarAngleOffsetDeg*pi/180.0
+
     self.camPitch = camPitchDeg*pi/180.0
     self.camYaw = camYawDeg*pi/180.0
 
@@ -76,7 +79,7 @@ class RadarVizNode():
     for i in range(0,64):
       if ( (status[i] is 3) or (status[i] is 4) or (status[i] is 5) ):
         self.range[i] = msg.range[i]
-        self.angle[i] = msg.azimuth[i]*pi/180.
+        self.angle[i] = msg.azimuth[i]*pi/180. - self.radarAngleOffset
       else:
         self.range[i] = 0.0
 
