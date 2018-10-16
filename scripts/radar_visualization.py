@@ -19,9 +19,15 @@ class RadarVizNode():
   def __init__(self):
 
     self.bridge = CvBridge()
-    
+
+    # --- Estimator parameters
+    self.radarAngleOffset = rospy.get_param('/range_kf_node/radar_angle_offset_degrees',0.0) * (pi/180.)
+    self.laneWidth = rospy.get_param('/range_kf_node/lane_width',3.6)
+    self.bumperWidth = rospy.get_param('/range_kf_node/nominal_vehicle_bumper_width',2.6)
+
     # --- Vizualization parameters
-    self.boxWidth = rospy.get_param('~box_width',1.0)
+    # self.boxWidth = rospy.get_param('~box_width',1.0)
+    self.boxWidth = self.bumperWidth
     self.lineWidth = rospy.get_param('~line_width',1)
     self.showRangeEstimate = rospy.get_param('~show_range_estimate',True)
 
@@ -36,7 +42,8 @@ class RadarVizNode():
     self.camYaw = camYawDeg*pi/180.0
 
     # --- Topic names
-    rangeTopic = rospy.get_param('~range_estimate_topic',"/range_kf_node/rangeEstimationOutput")
+    leadTopic = rospy.get_param('~range_estimate_lead_topic',"/range_kf_node/leadVehicleState")
+    cutInTopic = rospy.get_param('~range_estimate_cut_in_topic',"/range_kf_node/cutInVehicleState")
     radarTopic = rospy.get_param('~radar_topic',"/delphi_node/radar_data")
     imageTopic = rospy.get_param('~image_topic',"/axis_decompressed")
     
@@ -47,22 +54,34 @@ class RadarVizNode():
     rospy.Subscriber(imageTopic,Image,self.imageCallback,queue_size=1)
     
     if self.showRangeEstimate:
-      rospy.Subscriber(rangeTopic,RangeEstimationOutput,self.rangeCallback,queue_size=1)
+      rospy.Subscriber(leadTopic,RangeEstimationOutput,self.leadCallback,queue_size=1)
+      rospy.Subscriber(cutInTopic,RangeEstimationOutput,self.cutInCallback,queue_size=1)
     
     # --- Class variables
     self.range = np.zeros( (64,1) ) # radar ranges
     self.angle = np.zeros( (64,1) ) # radar angles
 
-    self.estRange = None
-    self.estAngle = None
+    self.leadRange = None
+    self.leadAngle = None
+
+    self.cutInRange = 0.0
+    self.cutInAngle = 0.0
+
+    self.cutInDetected = False
 
     self.Mint = np.matrix((  (941.087953,0.000000,624.481729),
                              (0.000000,942.665887,382.681338),
                              (0.000000,0.000000,1.000000)   ))
 
-  def rangeCallback(self,msg):
-    self.estRange = msg.range;
-    self.estAngle = msg.azimuth;
+  def leadCallback(self,msg):
+    self.leadRange = msg.range
+    self.leadAngle = msg.azimuth
+    self.cutInDetected = msg.cut_in_detected
+
+  def cutInCallback(self,msg):
+    self.cutInRange = msg.range
+    self.cutInAngle = msg.azimuth
+    self.cutInDetected = msg.cut_in_detected
 
   def radarCallback(self,msg):
 
@@ -72,10 +91,15 @@ class RadarVizNode():
     else:
       status = msg.status
 
+    status = list(status)
+
     for i in range(0,64):
-      if ( (status[i] is 3) ):#and (msg.track_moving[i]) ):
+      # if ( (status[i] is 3) ):#and (msg.track_moving[i]) ):
+      cond1 = msg.track_moving[i]
+      cond2 = (status[i]==3) or (status[i]==4) or (status[i]==5)
+      if cond1 and cond2:
         self.range[i] = msg.range[i]
-        self.angle[i] = msg.azimuth[i]*pi/180.
+        self.angle[i] = msg.azimuth[i]*pi/180. - self.radarAngleOffset
       else:
         self.range[i] = 0.0
 
@@ -94,11 +118,25 @@ class RadarVizNode():
         boxPoints = self.getBoxPoints(self.range[i],self.angle[i])
         self.boxImageOverlay(boxPoints,(0,0,255),img)
     
-    # --- Overlay estimator solution
-    if self.estRange is not None:
-      boxPoints = self.getBoxPoints(self.estRange,self.estAngle)
+    # --- Overlay lead estimate solution
+    if self.leadRange is not None:
+      boxPoints = self.getBoxPoints(self.leadRange,self.leadAngle)
       self.boxImageOverlay(boxPoints,(255,0,0),img)
 
+    # --- Overlay cut in estimate solution
+    if self.cutInDetected:
+      boxPoints = self.getBoxPoints(self.cutInRange,self.cutInAngle)
+      self.boxImageOverlay(boxPoints,(0,255,0),img)
+
+    # --- Pure pursuit lane projection
+    if self.leadRange is not None:
+      try:
+        lanePointsLeft = self.getPathPoints(self.leadRange,self.leadAngle,-1)
+        lanePointsRight = self.getPathPoints(self.leadRange,self.leadAngle,1)
+        self.pathImageOverlay(lanePointsLeft,(255,255,255),img)
+        self.pathImageOverlay(lanePointsRight,(255,255,255),img)
+      except:
+        pass
     # --- Convert CV format into ROS format
     img_out = img
 
@@ -108,6 +146,12 @@ class RadarVizNode():
 
     self.image_pub.publish(image_msg)
 
+  def pathImageOverlay(self,pathPoints,bgr,img):
+    for idx in range(1,len(pathPoints)):
+      px0,py0 = self.getCameraProjection(pathPoints[idx-1])
+      px1,py1 = self.getCameraProjection(pathPoints[idx])
+      cv2.line(img,(px0,py0),(px1,py1),bgr,self.lineWidth)
+
   def boxImageOverlay(self,boxPoints,bgr,img):
     for pt1 in boxPoints.T:
         for pt2 in boxPoints.T:
@@ -116,6 +160,27 @@ class RadarVizNode():
                 px2,py2 = self.getCameraProjection(pt2.T)
                 if ( (px1 is not None) and (px2 is not None) ):
                     cv2.line(img,(px1,py1),(px2,py2),bgr,self.lineWidth)
+
+  def getPathPoints(self,r,ang,direction):
+    leadRpvX,leadRpvY = self.polarToCart(r,ang)
+    l2 = pow(leadRpvX,2) + pow(leadRpvY,2)
+    signedPathRadius = l2 / (2*leadRpvY) # radius 
+
+    pathPoints = []
+
+    xl = []
+    yl = []
+    x = 0.
+    xStep = 0.5
+    while x < pow(l2,0.5):
+      y = signedPathRadius - np.sign(signedPathRadius)*pow(signedPathRadius**2 - x**2,0.5)
+      y += direction*self.laneWidth/2.
+      pt = np.matrix([x,y,self.camHeight]).T
+      pathPoints.append(pt)
+
+      x += xStep
+
+    return pathPoints
 
   def getBoxPoints(self,r,ang):
     r_sp_s = np.matrix( (r*cos(ang),r*sin(ang),0.0) ).T # rpv from radar ("sensor") to point resolved in the sensor frame
@@ -166,6 +231,12 @@ class RadarVizNode():
     Rzz = np.matrix((  (cz,-sz,0.),(sz,cz,0.),(0.,0.,1.) ))
 
     return Rzz*Ryy*Rxx # Body to nav
+
+  def polarToCart(self,rng,ang):
+    rpvx = rng*cos(ang)
+    rpvy = rng*sin(ang)
+
+    return rpvx,rpvy
 
 def main(args):
   rospy.init_node('radar_viz_node')

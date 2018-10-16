@@ -1,26 +1,54 @@
 <launch>
 
-    <arg name="bagfile" default="/media/psf/Home/Google\ Drive/GAVLAB/data/trucks/9_1_17/run0_with_remote_vehicle_state_with_drtk_fix.bag"/>
+    <!-- <arg name="bagpath" default="/media/psf/Home/gavlab_local/data/trucks/A2_track_cutin_data_10_9_18/orig"/> -->
+    <!-- <arg name="filename" default="track_cutin_data_3"/> -->
 
-    <!-- <arg name="bagfile" default="/media/psf/Home/Google\ Drive/GAVLAB/data/trucks/8_15_17/bucket_radar_test.bag"/> -->
-
+    <!-- <arg name="bagpath" default="/media/psf/Home/gavlab_local/data/trucks/lateral_secret_skid_10_2_18"/> -->
+    <!-- <arg name="filename" default="lateral_secret_skid_pad_3"/> -->
+    
+    
     <!-- rosbag play -->
     <param name="use_sim_time" value="true"/>
-    <node name="rosbag" pkg="rosbag" type="play" args="-s 20 --clock -r 2.0 $(arg bagfile)" >
-        <!-- <remap from="/drtk/drtkOutput2" to="/drtk_node/drtkOutput"/> -->
-        <remap from="/range_kf_node/rangeEstimationOutput" to="/range_kf_node/rangeEstimationOutput_live"/>
+    <node name="rosbag" pkg="rosbag" type="play" args="-s 0 --clock -r 1.0 $(arg bagpath)/$(arg filename).bag" >
+      
+      <remap from="/range_kf_node/rangeEstimationOutput" to="/range_kf_node_live/rangeEstimationOutput"/>
+
     </node>
+
+
+    <!-- range estimation -->
+    <include file="$(find cacc_range_estimation)/launch/cacc_range_estimation.launch"/>
 
     <!-- decompress image -->
     <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/axis/image_raw out:=/axis_decompressed" />
 
-    <!-- range estimator -->
-    <include file="$(find cacc_range_estimation)/launch/cacc_range_estimation.launch"/>
-
-    <!-- radar overlay -->
-    <include file="$(find radar_visualization)/launch/radar_visualization.launch"/>
-
     <!-- image view -->
     <node pkg="image_view" type="image_view" name="image_view" output="screen" required="true" args="image:=/radar_visualization/image_overlay"/>
 
+<!-- radar vizualization -->
+  <node pkg="radar_visualization" type="radar_visualization.py" name="radar_visualization" output="screen" required="true">
+
+      <param name="box_width" value="1.0"/>
+      <param name="line_width" value="3"/>
+      <param name="show_range_estimate" value="true"/>
+      
+      <param name="camera_pitch_offset_deg" value="-4.5"/>
+      <param name="camera_yaw_offset_deg" value="0.0"/>
+      <param name="camera_height_offset" value="1.99"/>
+      <param name="camera_longitudinal_offset" value="1.70"/>
+      <!-- <param name="camera_lateral_offset" value="-0.14"/> -->
+      <param name="camera_lateral_offset" value="0.0"/>
+
+      <param name="range_estimate_topic" value="/range_kf_node/rangeEstimationOutput" type="string"/>
+      <param name="radar_topic" value="/delphi_node/radar_data" type="string"/>
+      <param name="image_topic" value="/axis_decompressed" type="string"/>
+            
+  </node>
+  
+
+    <!-- Rosbag record -->
+    <!-- <node pkg="rosbag" type="record" name="bagman" args="-a -b 0 -O '$(arg bagfile)_with_range_est.bag'"/> -->
+
 </launch>
+
+
