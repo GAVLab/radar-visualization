@@ -3,7 +3,7 @@ import sys
 import rospy
 import os
 
-from cacc_msgs.msg import RadarData,RangeEstimationOutput  
+from cacc_msgs.msg import RadarData,RangeEstimationOutput,RadarInPathTrackData  
 from sensor_msgs.msg import CameraInfo,Image
 
 from cv_bridge import CvBridge, CvBridgeError
@@ -53,7 +53,7 @@ class RadarVizNode():
     self.image_pub = rospy.Publisher("~image_overlay",Image,queue_size=1)
 
     rospy.Subscriber(radarTopic,RadarData,self.radarCallback,queue_size=1)
-    rospy.Subscriber(inPathTopic,RadarData,self.inPathCallback,queue_size=1)
+    rospy.Subscriber(inPathTopic,RadarInPathTrackData,self.inPathCallback,queue_size=1)
     rospy.Subscriber(imageTopic,Image,self.imageCallback,queue_size=1)
     
     if self.showRangeEstimate:
