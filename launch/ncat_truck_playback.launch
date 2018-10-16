@@ -1,7 +1,7 @@
 <launch>
 
-    <!-- <arg name="bagpath" default="/media/psf/Home/gavlab_local/data/trucks/A2_track_cutin_data_10_9_18/orig"/> -->
-    <!-- <arg name="filename" default="track_cutin_data_3"/> -->
+    <arg name="bagpath" default="/media/psf/Home/gavlab_local/data/trucks/A2_track_cutin_data_10_9_18/orig"/>
+    <arg name="filename" default="track_cutin_data_3"/>
 
     <!-- <arg name="bagpath" default="/media/psf/Home/gavlab_local/data/trucks/lateral_secret_skid_10_2_18"/> -->
     <!-- <arg name="filename" default="lateral_secret_skid_pad_3"/> -->

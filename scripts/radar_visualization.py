@@ -45,12 +45,15 @@ class RadarVizNode():
     leadTopic = rospy.get_param('~range_estimate_lead_topic',"/range_kf_node/leadVehicleState")
     cutInTopic = rospy.get_param('~range_estimate_cut_in_topic',"/range_kf_node/cutInVehicleState")
     radarTopic = rospy.get_param('~radar_topic',"/delphi_node/radar_data")
+    inPathTopic = rospy.get_param('~radar_in_path_topic',"/delphi_node/in_path_track")
+    
     imageTopic = rospy.get_param('~image_topic',"/axis_decompressed")
     
     # --- ROS publisher/subscriber
     self.image_pub = rospy.Publisher("~image_overlay",Image,queue_size=1)
 
     rospy.Subscriber(radarTopic,RadarData,self.radarCallback,queue_size=1)
+    rospy.Subscriber(inPathTopic,RadarData,self.inPathCallback,queue_size=1)
     rospy.Subscriber(imageTopic,Image,self.imageCallback,queue_size=1)
     
     if self.showRangeEstimate:
@@ -63,6 +66,9 @@ class RadarVizNode():
 
     self.leadRange = None
     self.leadAngle = None
+
+    self.inPathRange = None
+    self.inPathAngle = None
 
     self.cutInRange = 0.0
     self.cutInAngle = 0.0
@@ -82,6 +88,14 @@ class RadarVizNode():
     self.cutInRange = msg.range
     self.cutInAngle = msg.azimuth
     self.cutInDetected = msg.cut_in_detected
+
+  def inPathCallback(self,msg):
+    if msg.track_valid:
+      self.inPathRange = msg.range
+      self.inPathAngle = msg.azimuth*pi/180. - self.radarAngleOffset
+    else:
+      self.inPathRange = None
+      self.inPathAngle = None
 
   def radarCallback(self,msg):
 
@@ -118,6 +132,12 @@ class RadarVizNode():
         boxPoints = self.getBoxPoints(self.range[i],self.angle[i])
         self.boxImageOverlay(boxPoints,(0,0,255),img)
     
+    # --- Overlay in path radar tracks
+    if self.inPathRange is not None:
+      # Project range/angle to pixel location
+      boxPoints = self.getBoxPoints(self.inPathRange,self.inPathAngle)
+      self.boxImageOverlay(boxPoints,(255,140,0),img)
+  
     # --- Overlay lead estimate solution
     if self.leadRange is not None:
       boxPoints = self.getBoxPoints(self.leadRange,self.leadAngle)
